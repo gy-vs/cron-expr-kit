@@ -1,5 +1,15 @@
 import { expectAssignable, expectNotAssignable } from 'tsd';
-import { DayOfMonthRange, DayOfWeekRange, HourRange, MonthRange, SixtyRange } from '../src';
+import {
+  CronDate,
+  CronExpressions,
+  CronExpressionsResult,
+  CronExpressionParser,
+  DayOfMonthRange,
+  DayOfWeekRange,
+  HourRange,
+  MonthRange,
+  SixtyRange,
+} from '../src';
 import { Months } from '../src/CronExpressionParser';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -72,3 +82,12 @@ expectNotAssignable<DayOfWeekRange>(6.5);
 
 // Assert the MonthsEnum
 expectAssignable<keyof typeof Months>('jan');
+
+// Assert the parseMany API
+expectAssignable<CronExpressions>(CronExpressionParser.parseMany(['0 0 * * * *', '0 30 * * * *'], { tz: 'UTC' }));
+expectAssignable<CronExpressionsResult>(CronExpressionParser.parseMany(['0 0 * * * *']).next());
+expectAssignable<CronDate>(CronExpressionParser.parseMany(['0 0 * * * *']).next().date);
+expectAssignable<number[]>(CronExpressionParser.parseMany(['0 0 * * * *']).next().expressionIndices);
+expectAssignable<CronExpressionsResult[]>(CronExpressionParser.parseMany(['0 0 * * * *']).take(3));
+expectAssignable<boolean>(CronExpressionParser.parseMany(['0 0 * * * *']).hasNext());
+expectAssignable<boolean>(CronExpressionParser.parseMany(['0 0 * * * *']).hasPrev());

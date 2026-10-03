@@ -1,5 +1,6 @@
 import { CronFieldCollection } from './CronFieldCollection';
 import { CronExpression, CronExpressionOptions } from './CronExpression';
+import { CronExpressions } from './CronExpressions';
 import { type PRNG, seededRandom } from './utils/random';
 import {
   CronSecond,
@@ -147,6 +148,33 @@ export class CronExpressionParser {
       dayOfWeek: new CronDayOfWeek(dayOfWeek, { rawValue: rawFields.dayOfWeek, nthDayOfWeek }),
     });
     return new CronExpression(fields, { ...options, expression });
+  }
+
+  /**
+   * Parses multiple cron expressions and returns a CronExpressions object that iterates
+   * the union of all expressions' schedules in chronological order. Dates hit by several
+   * expressions are returned only once, with the indices of every matching expression attached.
+   * @param {string[]} expressions - The cron expressions to parse and merge.
+   * @param {CronExpressionOptions} [options={}] - The options to use when parsing the expressions. Applied uniformly to every expression.
+   * @param {boolean} [options.strict=false] - If true, will throw an error if an expression contains both dayOfMonth and dayOfWeek.
+   * @param {CronDate} [options.currentDate=new CronDate(undefined, 'UTC')] - The date to use when calculating the next/previous occurrence.
+   *
+   * @returns {CronExpressions} A CronExpressions object.
+   * @throws {Error} If the array is empty or any of the expressions is invalid; the error message contains the offending expression's index.
+   */
+  static parseMany(expressions: string[], options: CronExpressionOptions = {}): CronExpressions {
+    if (!Array.isArray(expressions) || expressions.length === 0) {
+      throw new Error('Invalid cron expressions, expected a non-empty array of cron expressions');
+    }
+    const createExpressions = (): CronExpression[] =>
+      expressions.map((expression, index) => {
+        try {
+          return CronExpressionParser.parse(expression, options);
+        } catch (error) {
+          throw new Error(`Invalid cron expression at index ${index}: ${(error as Error).message}`);
+        }
+      });
+    return new CronExpressions(createExpressions(), createExpressions);
   }
 
   /**
