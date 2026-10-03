@@ -1,5 +1,6 @@
 import { CronFieldCollection } from './CronFieldCollection';
 import { CronExpression, CronExpressionOptions } from './CronExpression';
+import { CronExpressionCollection } from './CronExpressionCollection';
 import { type PRNG, seededRandom } from './utils/random';
 import {
   CronSecond,
@@ -147,6 +148,35 @@ export class CronExpressionParser {
       dayOfWeek: new CronDayOfWeek(dayOfWeek, { rawValue: rawFields.dayOfWeek, nthDayOfWeek }),
     });
     return new CronExpression(fields, { ...options, expression });
+  }
+
+  /**
+   * Parses multiple cron expressions and merges them into a single schedule.
+   *
+   * The returned CronExpressionCollection iterates over the union of all expressions' trigger
+   * times in chronological order. Times triggered by several expressions at once are reported
+   * only once, together with the indices of every matching expression. All options
+   * (currentDate, startDate, endDate, tz, ...) apply uniformly to every expression.
+   *
+   * @param {readonly string[]} expressions - The cron expressions to parse and merge.
+   * @param {CronExpressionOptions} [options={}] - The options to use when parsing the expressions.
+   *
+   * @returns {CronExpressionCollection} A CronExpressionCollection object.
+   * @throws {Error} Throws immediately if any expression is invalid; the error message contains
+   *   the (zero-based) index of the offending expression in the input array.
+   */
+  static parseMany(expressions: readonly string[], options: CronExpressionOptions = {}): CronExpressionCollection {
+    if (!Array.isArray(expressions) || expressions.length === 0) {
+      throw new Error('parseMany requires a non-empty array of cron expressions');
+    }
+    const parsed = expressions.map((expression, index) => {
+      try {
+        return CronExpressionParser.parse(expression, options);
+      } catch (error) {
+        throw new Error(`Invalid cron expression at index ${index}: ${(error as Error).message}`);
+      }
+    });
+    return new CronExpressionCollection(parsed, options);
   }
 
   /**
